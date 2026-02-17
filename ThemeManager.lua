@@ -1,14 +1,9 @@
 local httpService = game:GetService('HttpService')
-local RunService = game:GetService('RunService')  -- <-- added
-
 local ThemeManager = {} do
 	ThemeManager.Folder = 'LinoriaLibSettings'
 	-- if not isfolder(ThemeManager.Folder) then makefolder(ThemeManager.Folder) end
 
 	ThemeManager.Library = nil
-	ThemeManager.ShimmerConnection = nil          -- <-- stores the Heartbeat connection
-	ThemeManager.staticAccentColor = nil          -- <-- last static accent before shimmer
-
 	ThemeManager.BuiltInThemes = {
 		['Default'] 		= { 1, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
 		['BBot'] 			= { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
@@ -35,11 +30,6 @@ local ThemeManager = {} do
 			if Options[idx] then
 				Options[idx]:SetValueRGB(Color3.fromHex(col))
 			end
-		end
-
-		-- <-- turn off shimmer if it's on
-		if Options and Options.ShimmerAccent then
-			Options.ShimmerAccent:SetValue(false)
 		end
 
 		self:ThemeUpdate()
@@ -92,9 +82,6 @@ local ThemeManager = {} do
 		groupbox:AddLabel('Outline color'):AddColorPicker('OutlineColor', { Default = self.Library.OutlineColor });
 		groupbox:AddLabel('Font color')	:AddColorPicker('FontColor', { Default = self.Library.FontColor });
 
-		-- <-- new toggle for shimmering accent
-		groupbox:AddToggle('ShimmerAccent', { Text = 'Shimmering Accent (240,150,255 ⇄ 255,255,255)', Default = false })
-
 		local ThemesArray = {}
 		for Name, Theme in next, self.BuiltInThemes do
 			table.insert(ThemesArray, Name)
@@ -137,43 +124,6 @@ local ThemeManager = {} do
 			if Options.ThemeManager_CustomThemeList.Value ~= nil and Options.ThemeManager_CustomThemeList.Value ~= '' then
 				self:SaveDefault(Options.ThemeManager_CustomThemeList.Value)
 				self.Library:Notify(string.format('Set default theme to %q', Options.ThemeManager_CustomThemeList.Value))
-			end
-		end)
-
-		-- <-- shimmer toggle logic
-		Options.ShimmerAccent:OnChanged(function()
-			if Options.ShimmerAccent.Value then
-				-- Disable the accent color picker and remember its static value
-				Options.AccentColor:SetDisabled(true)
-				self.staticAccentColor = Options.AccentColor.Value
-
-				local startColor = Color3.fromRGB(240, 150, 255)
-				local endColor   = Color3.fromRGB(255, 255, 255)
-				local speed = 2  -- cycles per second
-
-				local phase = 0
-				if self.ShimmerConnection then
-					self.ShimmerConnection:Disconnect()
-				end
-
-				self.ShimmerConnection = RunService.Heartbeat:Connect(function(dt)
-					phase = phase + dt * speed * math.pi * 2
-					local t = (math.sin(phase) + 1) / 2   -- goes 0→1→0 smoothly
-					local newColor = startColor:Lerp(endColor, t)
-					Options.AccentColor:SetValueRGB(newColor)
-				end)
-			else
-				-- Stop animation, re‑enable picker and restore static color
-				if self.ShimmerConnection then
-					self.ShimmerConnection:Disconnect()
-					self.ShimmerConnection = nil
-				end
-
-				Options.AccentColor:SetDisabled(false)
-				if self.staticAccentColor then
-					Options.AccentColor:SetValueRGB(self.staticAccentColor)
-					self.staticAccentColor = nil
-				end
 			end
 		end)
 
