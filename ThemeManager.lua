@@ -1,23 +1,19 @@
-local HttpService = game:GetService('HttpService')
+local httpService = game:GetService('HttpService')
 local ThemeManager = {} do
 	ThemeManager.Folder = 'LinoriaLibSettings'
 	-- if not isfolder(ThemeManager.Folder) then makefolder(ThemeManager.Folder) end
 
 	ThemeManager.Library = nil
 	ThemeManager.BuiltInThemes = {
-		['Default'] 		= { 1, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
-		['BBot'] 			= { 2, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
-		['Fatality']		= { 3, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1842","AccentColor":"c50754","BackgroundColor":"191335","OutlineColor":"3c355d"}') },
-		['Jester'] 			= { 4, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"db4467","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
-		['Mint'] 			= { 5, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"3db488","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
-		['Tokyo Night'] 	= { 6, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"191925","AccentColor":"6759b3","BackgroundColor":"16161f","OutlineColor":"323232"}') },
-		['Ubuntu'] 			= { 7, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"3e3e3e","AccentColor":"e2581e","BackgroundColor":"323232","OutlineColor":"191919"}') },
-		['Quartz'] 			= { 8, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"232330","AccentColor":"426e87","BackgroundColor":"1d1b26","OutlineColor":"27232f"}') },
+		['Default'] 		= { 1, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"eda7ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
+		['BBot'] 			= { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
+		['Fatality']		= { 3, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1842","AccentColor":"c50754","BackgroundColor":"191335","OutlineColor":"3c355d"}') },
+		['Jester'] 			= { 4, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"db4467","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
+		['Mint'] 			= { 5, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"3db488","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
+		['Tokyo Night'] 	= { 6, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"191925","AccentColor":"6759b3","BackgroundColor":"16161f","OutlineColor":"323232"}') },
+		['Ubuntu'] 			= { 7, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"3e3e3e","AccentColor":"e2581e","BackgroundColor":"323232","OutlineColor":"191919"}') },
+		['Quartz'] 			= { 8, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"232330","AccentColor":"426e87","BackgroundColor":"1d1b26","OutlineColor":"27232f"}') },
 	}
-
-	-- Переменные для управления анимацией
-	ThemeManager.AnimationCoroutine = nil
-	ThemeManager.AnimationEnabled = false
 
 	function ThemeManager:ApplyTheme(theme)
 		local customThemeData = self:GetCustomTheme(theme)
@@ -25,11 +21,7 @@ local ThemeManager = {} do
 
 		if not data then return end
 
-		-- При применении темы останавливаем анимацию и выключаем тумблер
-		self:StopAnimation()
-		if Options.AnimateAccent then
-			Options.AnimateAccent:SetValue(false)
-		end
+		-- custom themes are just regular dictionaries instead of an array with { index, dictionary }
 
 		local scheme = data[2]
 		for idx, col in next, customThemeData or scheme do
@@ -48,60 +40,12 @@ local ThemeManager = {} do
 		local options = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
 		for i, field in next, options do
 			if Options and Options[field] then
-				-- Не обновляем AccentColor из Options, если анимация включена
-				if field == "AccentColor" and self.AnimationEnabled then
-					-- пропускаем, оставляем текущий анимированный цвет
-				else
-					self.Library[field] = Options[field].Value
-				end
+				self.Library[field] = Options[field].Value
 			end
 		end
 
 		self.Library.AccentColorDark = self.Library:GetDarkerColor(self.Library.AccentColor);
 		self.Library:UpdateColorsUsingRegistry()
-	end
-
-	function ThemeManager:StartAnimation()
-		if self.AnimationCoroutine then
-			self:StopAnimation()
-		end
-
-		self.AnimationEnabled = true
-		local speed = 1 -- полный цикл в секунду
-
-		self.AnimationCoroutine = task.spawn(function()
-			local startTime = tick()
-			while self.AnimationEnabled do
-				-- Получаем актуальные цвета из пикеров на каждой итерации
-				local startColor = Options.AnimateStartColor.Value
-				local endColor = Options.AnimateEndColor.Value
-				
-				local t = (tick() - startTime) * speed
-				local alpha = (math.sin(t * math.pi * 2) + 1) / 2 -- от 0 до 1 и обратно
-				local currentColor = startColor:Lerp(endColor, alpha)
-				
-				-- Меняем акцентный цвет в библиотеке, не трогая Options.AccentColor
-				self.Library.AccentColor = currentColor
-				self.Library.AccentColorDark = self.Library:GetDarkerColor(currentColor)
-				self.Library:UpdateColorsUsingRegistry()
-
-				task.wait()
-			end
-		end)
-	end
-
-	function ThemeManager:StopAnimation()
-		self.AnimationEnabled = false
-		if self.AnimationCoroutine then
-			task.cancel(self.AnimationCoroutine)
-			self.AnimationCoroutine = nil
-		end
-		-- Возвращаем статический цвет из Options
-		if Options and Options.AccentColor then
-			self.Library.AccentColor = Options.AccentColor.Value
-			self.Library.AccentColorDark = self.Library:GetDarkerColor(Options.AccentColor.Value)
-			self.Library:UpdateColorsUsingRegistry()
-		end
 	end
 
 	function ThemeManager:LoadDefault()		
@@ -137,40 +81,6 @@ local ThemeManager = {} do
 		groupbox:AddLabel('Accent color'):AddColorPicker('AccentColor', { Default = self.Library.AccentColor });
 		groupbox:AddLabel('Outline color'):AddColorPicker('OutlineColor', { Default = self.Library.OutlineColor });
 		groupbox:AddLabel('Font color')	:AddColorPicker('FontColor', { Default = self.Library.FontColor });
-
-		-- Добавляем элементы для анимации
-		groupbox:AddDivider()
-		groupbox:AddToggle('AnimateAccent', { Text = 'Animated accent color', Default = false })
-		-- Добавляем два ColorPicker с пояснениями
-		groupbox:AddLabel('Start color'):AddColorPicker('AnimateStartColor', { Default = Color3.fromRGB(240, 150, 255) })
-		groupbox:AddLabel('End color'):AddColorPicker('AnimateEndColor', { Default = Color3.fromRGB(255, 255, 255) })
-
-		-- Обработчики
-		Options.AnimateAccent:OnChanged(function()
-			if Options.AnimateAccent.Value then
-				self:StartAnimation()
-			else
-				self:StopAnimation()
-			end
-		end)
-
-		-- При изменении цветов, если анимация работает, ничего дополнительно не требуется, 
-		-- потому что StartAnimation читает актуальные значения в цикле.
-		-- Но если хотим перезапустить анимацию с новыми цветами сразу, можно добавить:
-		Options.AnimateStartColor:OnChanged(function()
-			if self.AnimationEnabled then
-				-- можно перезапустить цикл, чтобы сбросить startTime?
-				-- но можно просто позволить циклу подхватить новые значения, startTime останется прежним,
-				-- что приведёт к скачку цвета. Лучше перезапустить анимацию с новым startTime.
-				self:StartAnimation() -- перезапустит с текущими цветами и новым временем
-			end
-		end)
-
-		Options.AnimateEndColor:OnChanged(function()
-			if self.AnimationEnabled then
-				self:StartAnimation()
-			end
-		end)
 
 		local ThemesArray = {}
 		for Name, Theme in next, self.BuiltInThemes do
@@ -237,7 +147,7 @@ local ThemeManager = {} do
 		end
 
 		local data = readfile(path)
-		local success, decoded = pcall(HttpService.JSONDecode, HttpService, data)
+		local success, decoded = pcall(httpService.JSONDecode, httpService, data)
 		
 		if not success then
 			return nil
@@ -258,7 +168,7 @@ local ThemeManager = {} do
 			theme[field] = Options[field].Value:ToHex()
 		end
 
-		writefile(self.Folder .. '/themes/' .. file .. '.json', HttpService:JSONEncode(theme))
+		writefile(self.Folder .. '/themes/' .. file .. '.json', httpService:JSONEncode(theme))
 	end
 
 	function ThemeManager:ReloadCustomThemes()
