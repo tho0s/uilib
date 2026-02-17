@@ -1,24 +1,22 @@
-local httpService = game:GetService('RunService') -- для анимации используем RunService, но импортируем HttpService отдельно
-local httpServiceJson = game:GetService('HttpService')
+local HttpService = game:GetService('HttpService')
 local ThemeManager = {} do
 	ThemeManager.Folder = 'LinoriaLibSettings'
+	-- if not isfolder(ThemeManager.Folder) then makefolder(ThemeManager.Folder) end
 
 	ThemeManager.Library = nil
 	ThemeManager.BuiltInThemes = {
-		['Default'] 		= { 1, httpServiceJson:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
-		['BBot'] 			= { 2, httpServiceJson:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
-		['Fatality']		= { 3, httpServiceJson:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1842","AccentColor":"c50754","BackgroundColor":"191335","OutlineColor":"3c355d"}') },
-		['Jester'] 			= { 4, httpServiceJson:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"db4467","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
-		['Mint'] 			= { 5, httpServiceJson:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"3db488","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
-		['Tokyo Night'] 	= { 6, httpServiceJson:JSONDecode('{"FontColor":"ffffff","MainColor":"191925","AccentColor":"6759b3","BackgroundColor":"16161f","OutlineColor":"323232"}') },
-		['Ubuntu'] 			= { 7, httpServiceJson:JSONDecode('{"FontColor":"ffffff","MainColor":"3e3e3e","AccentColor":"e2581e","BackgroundColor":"323232","OutlineColor":"191919"}') },
-		['Quartz'] 			= { 8, httpServiceJson:JSONDecode('{"FontColor":"ffffff","MainColor":"232330","AccentColor":"426e87","BackgroundColor":"1d1b26","OutlineColor":"27232f"}') },
+		['Default'] 		= { 1, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
+		['BBot'] 			= { 2, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
+		['Fatality']		= { 3, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1842","AccentColor":"c50754","BackgroundColor":"191335","OutlineColor":"3c355d"}') },
+		['Jester'] 			= { 4, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"db4467","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
+		['Mint'] 			= { 5, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"3db488","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
+		['Tokyo Night'] 	= { 6, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"191925","AccentColor":"6759b3","BackgroundColor":"16161f","OutlineColor":"323232"}') },
+		['Ubuntu'] 			= { 7, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"3e3e3e","AccentColor":"e2581e","BackgroundColor":"323232","OutlineColor":"191919"}') },
+		['Quartz'] 			= { 8, HttpService:JSONDecode('{"FontColor":"ffffff","MainColor":"232330","AccentColor":"426e87","BackgroundColor":"1d1b26","OutlineColor":"27232f"}') },
 	}
 
 	-- Переменные для управления анимацией
 	ThemeManager.AnimationCoroutine = nil
-	ThemeManager.AnimationStartColor = Color3.fromRGB(240, 150, 255)
-	ThemeManager.AnimationEndColor = Color3.fromRGB(255, 255, 255)
 	ThemeManager.AnimationEnabled = false
 
 	function ThemeManager:ApplyTheme(theme)
@@ -46,6 +44,7 @@ local ThemeManager = {} do
 	end
 
 	function ThemeManager:ThemeUpdate()
+		-- This allows us to force apply themes without loading the themes tab :)
 		local options = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
 		for i, field in next, options do
 			if Options and Options[field] then
@@ -68,13 +67,15 @@ local ThemeManager = {} do
 		end
 
 		self.AnimationEnabled = true
-		local startColor = self.AnimationStartColor
-		local endColor = self.AnimationEndColor
-		local startTime = tick()
 		local speed = 1 -- полный цикл в секунду
 
 		self.AnimationCoroutine = task.spawn(function()
+			local startTime = tick()
 			while self.AnimationEnabled do
+				-- Получаем актуальные цвета из пикеров на каждой итерации
+				local startColor = Options.AnimateStartColor.Value
+				local endColor = Options.AnimateEndColor.Value
+				
 				local t = (tick() - startTime) * speed
 				local alpha = (math.sin(t * math.pi * 2) + 1) / 2 -- от 0 до 1 и обратно
 				local currentColor = startColor:Lerp(endColor, alpha)
@@ -84,7 +85,6 @@ local ThemeManager = {} do
 				self.Library.AccentColorDark = self.Library:GetDarkerColor(currentColor)
 				self.Library:UpdateColorsUsingRegistry()
 
-				-- Ждём следующий кадр
 				task.wait()
 			end
 		end)
@@ -140,31 +140,36 @@ local ThemeManager = {} do
 
 		-- Добавляем элементы для анимации
 		groupbox:AddDivider()
-		local animateToggle = groupbox:AddToggle('AnimateAccent', { Text = 'Animated accent color', Default = false })
-		-- Добавляем два ColorPicker рядом с тумблером (можно сделать в одной строке, но в Linoria, вероятно, AddColorPicker создаёт новый элемент)
-		-- Создадим отдельные пикеры с пояснениями
+		groupbox:AddToggle('AnimateAccent', { Text = 'Animated accent color', Default = false })
+		-- Добавляем два ColorPicker с пояснениями
 		groupbox:AddLabel('Start color'):AddColorPicker('AnimateStartColor', { Default = Color3.fromRGB(240, 150, 255) })
 		groupbox:AddLabel('End color'):AddColorPicker('AnimateEndColor', { Default = Color3.fromRGB(255, 255, 255) })
 
 		-- Обработчики
 		Options.AnimateAccent:OnChanged(function()
 			if Options.AnimateAccent.Value then
-				-- Обновляем текущие цвета анимации из пикеров
-				self.AnimationStartColor = Options.AnimateStartColor.Value
-				self.AnimationEndColor = Options.AnimateEndColor.Value
 				self:StartAnimation()
 			else
 				self:StopAnimation()
 			end
 		end)
 
+		-- При изменении цветов, если анимация работает, ничего дополнительно не требуется, 
+		-- потому что StartAnimation читает актуальные значения в цикле.
+		-- Но если хотим перезапустить анимацию с новыми цветами сразу, можно добавить:
 		Options.AnimateStartColor:OnChanged(function()
-			self.AnimationStartColor = Options.AnimateStartColor.Value
-			-- Если анимация работает, новые цвета подхватятся автоматически в цикле
+			if self.AnimationEnabled then
+				-- можно перезапустить цикл, чтобы сбросить startTime?
+				-- но можно просто позволить циклу подхватить новые значения, startTime останется прежним,
+				-- что приведёт к скачку цвета. Лучше перезапустить анимацию с новым startTime.
+				self:StartAnimation() -- перезапустит с текущими цветами и новым временем
+			end
 		end)
 
 		Options.AnimateEndColor:OnChanged(function()
-			self.AnimationEndColor = Options.AnimateEndColor.Value
+			if self.AnimationEnabled then
+				self:StartAnimation()
+			end
 		end)
 
 		local ThemesArray = {}
@@ -232,7 +237,7 @@ local ThemeManager = {} do
 		end
 
 		local data = readfile(path)
-		local success, decoded = pcall(httpServiceJson.JSONDecode, httpServiceJson, data)
+		local success, decoded = pcall(HttpService.JSONDecode, HttpService, data)
 		
 		if not success then
 			return nil
@@ -253,7 +258,7 @@ local ThemeManager = {} do
 			theme[field] = Options[field].Value:ToHex()
 		end
 
-		writefile(self.Folder .. '/themes/' .. file .. '.json', httpServiceJson:JSONEncode(theme))
+		writefile(self.Folder .. '/themes/' .. file .. '.json', HttpService:JSONEncode(theme))
 	end
 
 	function ThemeManager:ReloadCustomThemes()
@@ -263,6 +268,8 @@ local ThemeManager = {} do
 		for i = 1, #list do
 			local file = list[i]
 			if file:sub(-5) == '.json' then
+				-- i hate this but it has to be done ...
+
 				local pos = file:find('.json', 1, true)
 				local char = file:sub(pos, pos)
 
@@ -286,6 +293,9 @@ local ThemeManager = {} do
 
 	function ThemeManager:BuildFolderTree()
 		local paths = {}
+
+		-- build the entire tree if a path is like some-hub/phantom-forces
+		-- makefolder builds the entire tree on Synapse X but not other exploits
 
 		local parts = self.Folder:split('/')
 		for idx = 1, #parts do
